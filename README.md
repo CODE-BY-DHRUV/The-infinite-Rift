@@ -5,30 +5,9 @@
 <!-- cf-sync -->
 # Competitive Programming Solutions
 
-Synced automatically by SolveBase.
+<!--Synced automatically by SolveBase.-->
 
 **Total solved: 17**
-
-## Codeforces
-
-Solutions by [Codeforces](https://codeforces.com/profile/), organized by difficulty rating.
-
-**Solved: 0**
-
-| Difficulty | Solved |
-| --- | --- |
-| — | 0 |
-
-
-## LeetCode
-
-Solutions organized by primary topic folder.
-
-**Solved: 0**
-
-| Topic | Solved |
-| --- | --- |
-| — | 0 |
 
 
 ## CSES
