@@ -2,17 +2,17 @@ import java.io.*;
 import java.util.*;
 
 public class Main {
-    static final int DAY = 24 * 60;
-    static final int WEEK = 7 * DAY;
 
-    static int toMinutes(String s) {
-        int h = (s.charAt(0) - '0') * 10 + (s.charAt(1) - '0');
-        int m = (s.charAt(3) - '0') * 10 + (s.charAt(4) - '0');
-        return h * 60 + m;
+    static final int DAY = 1440;
+    static final int WEEK = 10080;
+
+    static int parseTime(String s) {
+        return Integer.parseInt(s.substring(0, 2)) * 60
+             + Integer.parseInt(s.substring(3, 5));
     }
 
-    static String toTime(int x) {
-        if (x == DAY) {
+    static String formatTime(int x) {
+        if (x == 1440) {
             return "00:00";
         }
 
@@ -22,37 +22,60 @@ public class Main {
         return String.format("%02d:%02d", h, m);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        Scanner sc = new Scanner(System.in);
+        BufferedReader br =
+                new BufferedReader(new InputStreamReader(System.in));
 
-        // First line = friend's timezone
-        int timezone = sc.nextInt();
+        String first = br.readLine();
 
+        if (first == null || first.trim().isEmpty()) {
+            return;
+        }
+
+        int timezone = Integer.parseInt(first.trim());
         int shift = timezone * 60;
 
-        // availability[minute] tells whether the friend
-        // is available at that minute in the original timezone.
-        boolean[] availability = new boolean[WEEK];
+        boolean[] available = new boolean[WEEK];
 
-        // Read 7 days: Sunday ... Saturday
+        // Read Sunday to Saturday
         for (int day = 0; day < 7; day++) {
 
-            int k = sc.nextInt();
+            String line = br.readLine();
 
-            for (int i = 0; i < k; i++) {
+            while (line != null && line.trim().isEmpty()) {
+                line = br.readLine();
+            }
 
-                String startString = sc.next();
-                String endString = sc.next();
+            if (line == null) {
+                return;
+            }
 
-                int start = toMinutes(startString);
-                int end = toMinutes(endString);
+            int k = Integer.parseInt(line.trim());
 
-                /*
-                 * Special case:
-                 * 00:00 as an END means midnight at the
-                 * end of the day.
-                 */
+            for (int j = 0; j < k; j++) {
+
+                String intervalLine = br.readLine();
+
+                while (intervalLine != null &&
+                       intervalLine.trim().isEmpty()) {
+                    intervalLine = br.readLine();
+                }
+
+                if (intervalLine == null) {
+                    return;
+                }
+
+                StringTokenizer st =
+                        new StringTokenizer(intervalLine);
+
+                String startString = st.nextToken();
+                String endString = st.nextToken();
+
+                int start = parseTime(startString);
+                int end = parseTime(endString);
+
+                // 00:00 as end means end of day.
                 if (end == 0) {
                     end = DAY;
                 }
@@ -60,91 +83,68 @@ public class Main {
                 int base = day * DAY;
 
                 for (int minute = start; minute < end; minute++) {
-                    availability[base + minute] = true;
+                    available[base + minute] = true;
                 }
             }
         }
 
-        /*
-         * Translate to our timezone.
-         *
-         * Friend's time - timezone difference.
-         *
-         * Example:
-         * friend's 12:00 with T = 6
-         * becomes our 06:00.
-         */
-        boolean[] translated = new boolean[WEEK];
+        // Shift everything backwards by timezone.
+        boolean[] result = new boolean[WEEK];
 
-        for (int minute = 0; minute < WEEK; minute++) {
+        for (int i = 0; i < WEEK; i++) {
 
-            if (availability[minute]) {
+            if (available[i]) {
 
-                int newMinute = minute - shift;
+                int newPos = i - shift;
 
-                // Wrap around the week.
-                if (newMinute < 0) {
-                    newMinute += WEEK;
+                if (newPos < 0) {
+                    newPos += WEEK;
                 }
 
-                translated[newMinute] = true;
+                result[newPos] = true;
             }
         }
 
-        StringBuilder ans = new StringBuilder();
+        StringBuilder output = new StringBuilder();
 
-        /*
-         * Convert the boolean representation back into
-         * intervals for each of the 7 days.
-         */
+        // Print Sunday through Saturday.
         for (int day = 0; day < 7; day++) {
 
-            int dayStart = day * DAY;
-            int dayEnd = dayStart + DAY;
+            int base = day * DAY;
 
             List<int[]> intervals = new ArrayList<>();
 
-            int i = dayStart;
+            int i = 0;
 
-            while (i < dayEnd) {
+            while (i < DAY) {
 
-                if (!translated[i]) {
+                if (!result[base + i]) {
                     i++;
                     continue;
                 }
 
                 int start = i;
 
-                while (i < dayEnd && translated[i]) {
+                while (i < DAY && result[base + i]) {
                     i++;
                 }
 
-                int end = i - dayStart;
+                int end = i;
 
-                // If availability reaches midnight,
-                // output 00:00 as the end time.
-                if (i == dayEnd) {
-                    end = DAY;
-                }
-
-                intervals.add(new int[]{
-                    start - dayStart,
-                    end
-                });
+                intervals.add(new int[]{start, end});
             }
 
-            ans.append(intervals.size()).append('\n');
+            output.append(intervals.size()).append('\n');
 
             for (int[] interval : intervals) {
-                ans.append(toTime(interval[0]))
-                   .append(' ')
-                   .append(toTime(interval[1]))
-                   .append('\n');
+
+                output.append(formatTime(interval[0]))
+                      .append(' ')
+                      .append(formatTime(interval[1]))
+                      .append('\n');
             }
         }
 
-        System.out.print(ans);
-
-        sc.close();
+        System.out.print(output);
     }
 }
