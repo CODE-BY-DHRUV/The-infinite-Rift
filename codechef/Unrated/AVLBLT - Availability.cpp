@@ -2,13 +2,13 @@ import java.io.*;
 import java.util.*;
 
 public class Main {
-
-    static final int DAY = 1440;
+    static final int DAY = 24 * 60;
     static final int WEEK = 7 * DAY;
 
     static int toMinutes(String s) {
-        return Integer.parseInt(s.substring(0, 2)) * 60
-                + Integer.parseInt(s.substring(3, 5));
+        int h = (s.charAt(0) - '0') * 10 + (s.charAt(1) - '0');
+        int m = (s.charAt(3) - '0') * 10 + (s.charAt(4) - '0');
+        return h * 60 + m;
     }
 
     static String toTime(int x) {
@@ -22,152 +22,129 @@ public class Main {
         return String.format("%02d:%02d", h, m);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(System.in)
-        );
+        Scanner sc = new Scanner(System.in);
 
-        // IMPORTANT:
-        // First line is timezone, NOT number of test cases.
-        int timezone = Integer.parseInt(br.readLine().trim());
+        // First line = friend's timezone
+        int timezone = sc.nextInt();
+
         int shift = timezone * 60;
 
-        // Each interval is stored as:
-        // [start, end) in absolute week minutes.
-        List<int[]> intervals = new ArrayList<>();
+        // availability[minute] tells whether the friend
+        // is available at that minute in the original timezone.
+        boolean[] availability = new boolean[WEEK];
 
+        // Read 7 days: Sunday ... Saturday
         for (int day = 0; day < 7; day++) {
 
-            int k = Integer.parseInt(br.readLine().trim());
+            int k = sc.nextInt();
 
             for (int i = 0; i < k; i++) {
 
-                StringTokenizer st =
-                        new StringTokenizer(br.readLine());
+                String startString = sc.next();
+                String endString = sc.next();
 
-                String s = st.nextToken();
-                String e = st.nextToken();
+                int start = toMinutes(startString);
+                int end = toMinutes(endString);
 
-                int start = toMinutes(s);
-                int end = toMinutes(e);
-
-                // 00:00 as end means end of the day.
+                /*
+                 * Special case:
+                 * 00:00 as an END means midnight at the
+                 * end of the day.
+                 */
                 if (end == 0) {
                     end = DAY;
                 }
 
-                int absoluteStart = day * DAY + start;
-                int absoluteEnd = day * DAY + end;
+                int base = day * DAY;
 
-                // Subtract timezone.
-                absoluteStart -= shift;
-                absoluteEnd -= shift;
-
-                // Normalize the interval to [0, WEEK).
-                while (absoluteStart < 0) {
-                    absoluteStart += WEEK;
-                    absoluteEnd += WEEK;
-                }
-
-                while (absoluteStart >= WEEK) {
-                    absoluteStart -= WEEK;
-                    absoluteEnd -= WEEK;
-                }
-
-                // If interval crosses Saturday -> Sunday.
-                if (absoluteEnd > WEEK) {
-                    intervals.add(new int[]{
-                            absoluteStart,
-                            WEEK
-                    });
-
-                    intervals.add(new int[]{
-                            0,
-                            absoluteEnd - WEEK
-                    });
-                } else {
-                    intervals.add(new int[]{
-                            absoluteStart,
-                            absoluteEnd
-                    });
+                for (int minute = start; minute < end; minute++) {
+                    availability[base + minute] = true;
                 }
             }
         }
 
-        // Sort by starting time.
-        intervals.sort((a, b) -> {
-            if (a[0] != b[0]) {
-                return Integer.compare(a[0], b[0]);
-            }
-            return Integer.compare(a[1], b[1]);
-        });
+        /*
+         * Translate to our timezone.
+         *
+         * Friend's time - timezone difference.
+         *
+         * Example:
+         * friend's 12:00 with T = 6
+         * becomes our 06:00.
+         */
+        boolean[] translated = new boolean[WEEK];
 
-        // Merge overlapping/adjacent intervals.
-        List<int[]> merged = new ArrayList<>();
+        for (int minute = 0; minute < WEEK; minute++) {
 
-        for (int[] cur : intervals) {
+            if (availability[minute]) {
 
-            if (merged.isEmpty()) {
-                merged.add(cur);
-            } else {
-                int[] last = merged.get(merged.size() - 1);
+                int newMinute = minute - shift;
 
-                if (cur[0] <= last[1]) {
-                    last[1] = Math.max(last[1], cur[1]);
-                } else {
-                    merged.add(cur);
+                // Wrap around the week.
+                if (newMinute < 0) {
+                    newMinute += WEEK;
                 }
+
+                translated[newMinute] = true;
             }
         }
 
-        // Prepare intervals for each day.
-        List<int[]>[] answer = new ArrayList[7];
+        StringBuilder ans = new StringBuilder();
 
-        for (int i = 0; i < 7; i++) {
-            answer[i] = new ArrayList<>();
-        }
-
-        for (int[] interval : merged) {
-
-            int start = interval[0];
-            int end = interval[1];
-
-            while (start < end) {
-
-                int day = start / DAY;
-
-                int dayStart = day * DAY;
-                int dayEnd = Math.min(end, dayStart + DAY);
-
-                int startTime = start - dayStart;
-                int endTime = dayEnd - dayStart;
-
-                answer[day].add(new int[]{
-                        startTime,
-                        endTime
-                });
-
-                start = dayEnd;
-            }
-        }
-
-        // Output exactly 7 blocks.
-        StringBuilder out = new StringBuilder();
-
+        /*
+         * Convert the boolean representation back into
+         * intervals for each of the 7 days.
+         */
         for (int day = 0; day < 7; day++) {
 
-            out.append(answer[day].size()).append('\n');
+            int dayStart = day * DAY;
+            int dayEnd = dayStart + DAY;
 
-            for (int[] interval : answer[day]) {
+            List<int[]> intervals = new ArrayList<>();
 
-                out.append(toTime(interval[0]))
+            int i = dayStart;
+
+            while (i < dayEnd) {
+
+                if (!translated[i]) {
+                    i++;
+                    continue;
+                }
+
+                int start = i;
+
+                while (i < dayEnd && translated[i]) {
+                    i++;
+                }
+
+                int end = i - dayStart;
+
+                // If availability reaches midnight,
+                // output 00:00 as the end time.
+                if (i == dayEnd) {
+                    end = DAY;
+                }
+
+                intervals.add(new int[]{
+                    start - dayStart,
+                    end
+                });
+            }
+
+            ans.append(intervals.size()).append('\n');
+
+            for (int[] interval : intervals) {
+                ans.append(toTime(interval[0]))
                    .append(' ')
                    .append(toTime(interval[1]))
                    .append('\n');
             }
         }
 
-        System.out.print(out);
+        System.out.print(ans);
+
+        sc.close();
     }
 }
