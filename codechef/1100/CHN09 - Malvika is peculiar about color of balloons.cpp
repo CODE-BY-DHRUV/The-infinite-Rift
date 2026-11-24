@@ -1,36 +1,27 @@
-import java.io.*;
+import java.util.*;
 
 public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
 
-    public static void main(String[] args) throws IOException {
-
-        BufferedReader br = new BufferedReader(
-            new InputStreamReader(System.in)
-        );
-
-        int t = Integer.parseInt(br.readLine().trim());
-
-        StringBuilder sb = new StringBuilder();
+        int t = sc.nextInt();
 
         while (t-- > 0) {
+            String s = sc.next();
 
-            String s = br.readLine().trim();
+            int a = 0, b = 0;
 
-            int countA = 0;
-            int countB = 0;
-
-            for (int i = 0; i < s.length(); i++) {
-
-                if (s.charAt(i) == 'a') {
-                    countA++;
+            for (char c : s.toCharArray()) {
+                if (c == 'a') {
+                    a++;
                 } else {
-                    countB++;
+                    b++;
                 }
             }
 
-            sb.append(Math.min(countA, countB)).append('\n');
+            System.out.println(Math.min(a, b));
         }
 
-        System.out.print(sb);
+        sc.close();
     }
 }
